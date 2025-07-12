@@ -1,1 +1,1 @@
-worker: python botnews.py 
+web: python botnews.py 
