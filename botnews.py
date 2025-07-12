@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import time
 import re
 import asyncio
@@ -656,7 +656,7 @@ def send_email(subject, html_content, sender, recipients, password):
         return False, error_msg
 
 
-async def news_command_handler(update: Update, context):
+async def news_command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Xử lý lệnh /news, tìm nạp, hiển thị và gửi tin tức qua email."""
     
     target_date_str = None
@@ -730,7 +730,7 @@ async def news_command_handler(update: Update, context):
         print(f"Lỗi khi xử lý lệnh /news: {e}")
         await update.message.reply_text("❌ Rất tiếc, đã có lỗi xảy ra trong quá trình tìm nạp tin tức.")
 
-async def help_message_handler(update: Update, context):
+async def help_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Gửi tin nhắn hướng dẫn khi người dùng nhắn tin thông thường."""
     await update.message.reply_text("👋 Chào bạn! Vui lòng sử dụng lệnh /news [dd-mm-yyyy] để nhận tin tức. Nếu không nhập ngày, bot sẽ lấy tin tức hôm nay.")
 
@@ -853,7 +853,7 @@ def main():
         start_scheduler()
 
         print("🤖 Bot đang chạy... Gửi lệnh /news [dd-mm-yyyy] để bắt đầu.")
-        print("⏰ Bot sẽ tự động gửi tin tức vào lúc 18:03 và 20:00 hàng ngày")
+        print("⏰ Bot sẽ tự động gửi tin tức vào lúc 11:59 và 20:00 hàng ngày")
         print("🔄 Bot sẽ ping server mỗi 15 phút để giữ hoạt động")
         
         # Chạy Flask app trong thread riêng
@@ -868,9 +868,13 @@ def main():
         flask_thread.start()
         print("✅ Flask app đã khởi động")
         
-        # Chạy Telegram bot
+        # Chạy Telegram bot với cấu hình mới cho API 20.x
         print("🚀 Khởi động Telegram bot...")
-        app_instance.run_polling(drop_pending_updates=True)
+        app_instance.run_polling(
+            drop_pending_updates=True,
+            allowed_updates=["message", "callback_query"],
+            close_loop=False
+        )
         
     except Exception as e:
         print(f"❌ Lỗi khởi động bot: {e}")
