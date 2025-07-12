@@ -801,7 +801,7 @@ def run_scheduler():
     
     # Lập lịch gửi tin tức vào lúc 10:45 và 20:00 hàng ngày
     schedule.every().day.at("11:59").do(schedule_job)
-    schedule.every().day.at("20:00").do(schedule_job)
+    schedule.every().day.at("22:00").do(schedule_job)
     
     # Lập lịch ping server mỗi 15 phút để giữ nó hoạt động
     schedule.every(15).minutes.do(ping_server)
@@ -870,12 +870,21 @@ def main():
         
         # Chạy Telegram bot với cấu hình mới cho API 20.x
         print("🚀 Khởi động Telegram bot...")
-        app_instance.run_polling(
-            drop_pending_updates=True,
-            allowed_updates=["message", "callback_query"],
-            close_loop=False,
-            error_callback=lambda update, context: print(f"Lỗi: {context.error}")
-        )
+        try:
+            app_instance.run_polling(
+                drop_pending_updates=True,
+                allowed_updates=["message", "callback_query"],
+                close_loop=False
+            )
+        except Exception as e:
+            print(f"❌ Lỗi polling: {e}")
+            # Thử webhook nếu polling thất bại
+            print("🔄 Thử chuyển sang webhook...")
+            app_instance.run_webhook(
+                listen="0.0.0.0",
+                port=int(os.environ.get('PORT', 8000)),
+                webhook_url="https://your-app-name.onrender.com/webhook"
+            )
         
     except Exception as e:
         print(f"❌ Lỗi khởi động bot: {e}")
