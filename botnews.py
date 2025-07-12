@@ -801,7 +801,7 @@ def run_scheduler():
     
     # Lập lịch gửi tin tức vào lúc 10:45 và 20:00 hàng ngày
     schedule.every().day.at("11:59").do(schedule_job)
-    schedule.every().day.at("19:36").do(schedule_job)
+    schedule.every().day.at("20:00").do(schedule_job)
     
     # Lập lịch ping server mỗi 15 phút để giữ nó hoạt động
     schedule.every(15).minutes.do(ping_server)
@@ -873,7 +873,8 @@ def main():
         app_instance.run_polling(
             drop_pending_updates=True,
             allowed_updates=["message", "callback_query"],
-            close_loop=False
+            close_loop=False,
+            error_callback=lambda update, context: print(f"Lỗi: {context.error}")
         )
         
     except Exception as e:
