@@ -801,7 +801,7 @@ def run_scheduler():
     
     # Lập lịch gửi tin tức vào lúc 10:45 và 20:00 hàng ngày
     schedule.every().day.at("11:59").do(schedule_job)
-    schedule.every().day.at("20:00").do(schedule_job)
+    schedule.every().day.at("19:32").do(schedule_job)
     
     # Lập lịch ping server mỗi 15 phút để giữ nó hoạt động
     schedule.every(15).minutes.do(ping_server)
