@@ -847,6 +847,8 @@ def force_clear_webhook():
 
 def run_scheduler():
     """Chạy scheduler trong thread riêng."""
+    print("🚀 Scheduler thread bắt đầu chạy...")
+    
     def schedule_job():
         try:
             print("🔄 Bắt đầu scheduled job...")
@@ -862,11 +864,11 @@ def run_scheduler():
             traceback.print_exc()
     
     # Lập lịch gửi tin tức vào lúc 11:59 và 20:00 hàng ngày
-    schedule.every().day.at("14:15").do(schedule_job)
+    schedule.every().day.at("14:28").do(schedule_job)
     schedule.every().day.at("20:00").do(schedule_job)
     
     # Lập lịch ping bot Telegram mỗi 15 phút để giữ nó hoạt động
-    schedule.every(15).minutes.do(ping_telegram_bot)
+    schedule.every(5).minutes.do(ping_telegram_bot)
     
     # Thêm ping ngay khi khởi động để test
     schedule.every(1).minutes.do(ping_telegram_bot).tag('test_ping')
@@ -874,15 +876,17 @@ def run_scheduler():
     print("⏰ Đã lập lịch tự động gửi tin tức vào lúc 11:59 và 20:00 hàng ngày")
     print("🔄 Đã lập lịch ping Telegram API mỗi 15 phút để giữ hoạt động")
     print("🧪 Thêm ping test mỗi phút trong 5 phút đầu")
+    print(f"📊 Tổng số jobs đã lập: {len(schedule.get_jobs())}")
     
     # Chạy ping test trong 5 phút đầu
     test_count = 0
+    print("🧪 Bắt đầu ping test phase...")
     while test_count < 5:
         try:
             schedule.run_pending()
             time.sleep(60)  # Kiểm tra mỗi phút
             test_count += 1
-            print(f"🧪 Ping test {test_count}/5")
+            print(f"🧪 Ping test {test_count}/5 - {datetime.now().strftime('%H:%M:%S')}")
         except Exception as e:
             print(f"❌ Lỗi trong scheduler test: {e}")
             time.sleep(60)
@@ -890,8 +894,10 @@ def run_scheduler():
     # Xóa ping test sau 5 phút
     schedule.clear('test_ping')
     print("✅ Đã xóa ping test, chuyển sang chế độ bình thường")
+    print(f"📊 Số jobs còn lại: {len(schedule.get_jobs())}")
     
     # Chạy scheduler bình thường
+    print("🔄 Bắt đầu chế độ scheduler bình thường...")
     while True:
         try:
             schedule.run_pending()
@@ -1043,9 +1049,12 @@ def start_bot_and_scheduler():
         traceback.print_exc()
 
 def main():
+    print("🚀 Bắt đầu khởi động ứng dụng...")
+    
     # Khởi động bot và scheduler ở thread phụ
     bot_thread = threading.Thread(target=start_bot_and_scheduler, daemon=True)
     bot_thread.start()
+    print("✅ Bot thread đã được khởi động")
     
     # Khởi động scheduler riêng biệt để đảm bảo nó chạy
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
@@ -1058,8 +1067,9 @@ def main():
     # Flask chạy ở process chính
     port = int(os.environ.get('PORT', 8000))
     print(f"🚀 Khởi động Flask app trên port {port}")
-    print("✅ Các endpoint có sẵn: /, /ping, /health, /test, /status")
+    print("✅ Các endpoint có sẵn: /, /ping, /health, /test, /status, /scheduler-status")
     print("⏰ Scheduler sẽ chạy độc lập với bot")
+    print("🧪 Scheduler sẽ ping test mỗi phút trong 5 phút đầu")
     app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 if __name__ == '__main__':
