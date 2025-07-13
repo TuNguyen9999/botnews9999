@@ -781,9 +781,21 @@ def ping_server():
     """Hàm ping để giữ server hoạt động."""
     try:
         import requests
-        # Ping chính server của mình để giữ nó hoạt động
-        response = requests.get("https://botnews9999.onrender.com/ping", timeout=10)
-        print(f"🔄 Ping server: {response.status_code}")
+        base_url = "https://botnews9999.onrender.com"
+        
+        # Thử ping nhiều endpoint khác nhau
+        endpoints = ['/', '/ping', '/health', '/test']
+        
+        for endpoint in endpoints:
+            try:
+                response = requests.get(f"{base_url}{endpoint}", timeout=10)
+                print(f"🔄 Ping {endpoint}: {response.status_code}")
+                if response.status_code == 200:
+                    print(f"✅ {endpoint} hoạt động bình thường")
+                    break
+            except Exception as e:
+                print(f"❌ Lỗi khi ping {endpoint}: {e}")
+                
     except Exception as e:
         print(f"❌ Lỗi khi ping server: {e}")
 
@@ -800,7 +812,7 @@ def run_scheduler():
             print(f"❌ Lỗi trong scheduled job: {e}")
     
     # Lập lịch gửi tin tức vào lúc 10:45 và 20:00 hàng ngày
-    schedule.every().day.at("13:04").do(schedule_job)
+    schedule.every().day.at("13:24").do(schedule_job)
     schedule.every().day.at("20:00").do(schedule_job)
     
     # Lập lịch ping server mỗi 15 phút để giữ nó hoạt động
@@ -835,6 +847,23 @@ def ping():
 @app.route('/health')
 def health():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+@app.route('/test')
+def test():
+    return "✅ Flask server đang hoạt động bình thường!"
+
+@app.route('/status')
+def status():
+    return {
+        "bot_status": "running" if app_instance else "stopped",
+        "flask_status": "running",
+        "timestamp": datetime.now().isoformat()
+    }
+
+# Thêm route cho webhook Telegram (nếu cần)
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    return "OK"
 
 def start_bot_and_scheduler():
     global app_instance
@@ -877,9 +906,14 @@ def main():
     # Khởi động bot và scheduler ở thread phụ
     bot_thread = threading.Thread(target=start_bot_and_scheduler, daemon=True)
     bot_thread.start()
+    
+    # Đợi một chút để bot khởi động
+    time.sleep(2)
+    
     # Flask chạy ở process chính
     port = int(os.environ.get('PORT', 8000))
     print(f"🚀 Khởi động Flask app trên port {port}")
+    print("✅ Các endpoint có sẵn: /, /ping, /health, /test, /status")
     app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 if __name__ == '__main__':
