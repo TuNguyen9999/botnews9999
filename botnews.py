@@ -777,27 +777,26 @@ async def auto_send_news():
     except Exception as e:
         print(f"❌ Lỗi khi tự động gửi tin tức: {e}")
 
-def ping_server():
-    """Hàm ping để giữ server hoạt động."""
+def ping_telegram_bot():
+    """Hàm ping để giữ Telegram bot hoạt động."""
     try:
         import requests
-        base_url = "https://botnews9999.onrender.com"
+        # Ping bot Telegram để giữ nó hoạt động
+        bot_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getMe"
+        response = requests.get(bot_url, timeout=10)
+        print(f"🔄 Ping Telegram bot: {response.status_code}")
         
-        # Thử ping nhiều endpoint khác nhau
-        endpoints = ['/', '/ping', '/health', '/test']
-        
-        for endpoint in endpoints:
-            try:
-                response = requests.get(f"{base_url}{endpoint}", timeout=10)
-                print(f"🔄 Ping {endpoint}: {response.status_code}")
-                if response.status_code == 200:
-                    print(f"✅ {endpoint} hoạt động bình thường")
-                    break
-            except Exception as e:
-                print(f"❌ Lỗi khi ping {endpoint}: {e}")
-                
+        if response.status_code == 200:
+            bot_info = response.json()
+            if bot_info.get('ok'):
+                print(f"✅ Bot {bot_info['result']['first_name']} đang hoạt động")
+            else:
+                print(f"❌ Bot không hoạt động: {bot_info}")
+        else:
+            print(f"❌ Lỗi khi ping bot: {response.status_code}")
+            
     except Exception as e:
-        print(f"❌ Lỗi khi ping server: {e}")
+        print(f"❌ Lỗi khi ping Telegram bot: {e}")
 
 def run_scheduler():
     """Chạy scheduler trong thread riêng."""
@@ -812,14 +811,14 @@ def run_scheduler():
             print(f"❌ Lỗi trong scheduled job: {e}")
     
     # Lập lịch gửi tin tức vào lúc 10:45 và 20:00 hàng ngày
-    schedule.every().day.at("13:24").do(schedule_job)
+    schedule.every().day.at("13:35").do(schedule_job)
     schedule.every().day.at("20:00").do(schedule_job)
     
-    # Lập lịch ping server mỗi 15 phút để giữ nó hoạt động
-    schedule.every(15).minutes.do(ping_server)
+    # Lập lịch ping bot Telegram mỗi 15 phút để giữ nó hoạt động
+    schedule.every(15).minutes.do(ping_telegram_bot)
     
-    print("⏰ Đã lập lịch tự động gửi tin tức vào lúc 11:03 và 20:00 hàng ngày")
-    print("🔄 Đã lập lịch ping server mỗi 15 phút để giữ hoạt động")
+    print("⏰ Đã lập lịch tự động gửi tin tức vào lúc 11:59 và 20:00 hàng ngày")
+    print("🔄 Đã lập lịch ping Telegram bot mỗi 15 phút để giữ hoạt động")
     
     while True:
         try:
@@ -879,7 +878,7 @@ def start_bot_and_scheduler():
         start_scheduler()
         print("🤖 Bot đang chạy... Gửi lệnh /news [dd-mm-yyyy] để bắt đầu.")
         print("⏰ Bot sẽ tự động gửi tin tức vào lúc 11:59 và 20:00 hàng ngày")
-        print("🔄 Bot sẽ ping server mỗi 15 phút để giữ hoạt động")
+        print("🔄 Bot sẽ ping Telegram API mỗi 15 phút để giữ hoạt động")
         # Chạy Telegram bot với cấu hình mới cho API 20.x
         print("🚀 Khởi động Telegram bot...")
         try:
