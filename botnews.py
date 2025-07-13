@@ -777,127 +777,44 @@ async def auto_send_news():
     except Exception as e:
         print(f"❌ Lỗi khi tự động gửi tin tức: {e}")
 
-def ping_telegram_bot():
-    """Hàm ping để giữ Telegram bot hoạt động."""
+def ping_server():
+    """Hàm ping để giữ server hoạt động."""
     try:
         import requests
-        # Ping bot Telegram để giữ nó hoạt động
-        bot_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getMe"
-        response = requests.get(bot_url, timeout=10)
-        print(f"🔄 Ping Telegram bot: {response.status_code}")
+        # Ping chính server của mình để giữ nó hoạt động
+        base_url = "https://botnews9999.onrender.com"
+        response = requests.get(f"{base_url}/ping", timeout=10)
+        print(f"🔄 Ping server: {response.status_code}")
         
-        if response.status_code == 200:
-            bot_info = response.json()
-            if bot_info.get('ok'):
-                print(f"✅ Bot {bot_info['result']['first_name']} đang hoạt động")
-            else:
-                print(f"❌ Bot không hoạt động: {bot_info}")
-        else:
-            print(f"❌ Lỗi khi ping bot: {response.status_code}")
-            
-    except Exception as e:
-        print(f"❌ Lỗi khi ping Telegram bot: {e}")
-
-def check_bot_conflict():
-    """Kiểm tra xem bot có đang chạy ở đâu khác không."""
-    try:
-        import requests
-        # Kiểm tra webhook hiện tại
-        webhook_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getWebhookInfo"
-        response = requests.get(webhook_url, timeout=10)
+        # Thêm ping thêm endpoint khác để đảm bảo
+        response2 = requests.get(f"{base_url}/test", timeout=10)
+        print(f"🔄 Test endpoint: {response2.status_code}")
         
-        if response.status_code == 200:
-            webhook_info = response.json()
-            if webhook_info.get('ok') and webhook_info['result'].get('url'):
-                print(f"⚠️ Bot đang có webhook: {webhook_info['result']['url']}")
-                return True
-            else:
-                print("✅ Không có webhook đang hoạt động")
-                return False
-        else:
-            print(f"❌ Không thể kiểm tra webhook: {response.status_code}")
-            return False
-            
     except Exception as e:
-        print(f"❌ Lỗi khi kiểm tra conflict: {e}")
-        return False
-
-def force_clear_webhook():
-    """Force xóa webhook bằng requests trực tiếp."""
-    try:
-        import requests
-        delete_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/deleteWebhook"
-        response = requests.post(delete_url, timeout=10)
-        
-        if response.status_code == 200:
-            result = response.json()
-            if result.get('ok'):
-                print("✅ Force xóa webhook thành công")
-                return True
-            else:
-                print(f"❌ Không thể force xóa webhook: {result}")
-                return False
-        else:
-            print(f"❌ Lỗi khi force xóa webhook: {response.status_code}")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Lỗi khi force xóa webhook: {e}")
-        return False
+        print(f"❌ Lỗi khi ping server: {e}")
 
 def run_scheduler():
     """Chạy scheduler trong thread riêng."""
-    print("🚀 Scheduler thread bắt đầu chạy...")
-    
     def schedule_job():
         try:
-            print("🔄 Bắt đầu scheduled job...")
             # Tạo event loop mới cho thread này
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(auto_send_news())
             loop.close()
-            print("✅ Scheduled job hoàn thành")
         except Exception as e:
             print(f"❌ Lỗi trong scheduled job: {e}")
-            import traceback
-            traceback.print_exc()
     
-    # Lập lịch gửi tin tức vào lúc 11:59 và 20:00 hàng ngày
-    schedule.every().day.at("15:10").do(schedule_job)
+    # Lập lịch gửi tin tức vào lúc 10:45 và 20:00 hàng ngày
+    schedule.every().day.at("12:16").do(schedule_job)
     schedule.every().day.at("20:00").do(schedule_job)
     
-    # Lập lịch ping bot Telegram mỗi 15 phút để giữ nó hoạt động
-    schedule.every(5).minutes.do(ping_telegram_bot)
+    # Lập lịch ping server mỗi 15 phút để giữ nó hoạt động
+    schedule.every(15).minutes.do(ping_server)
     
-    # Thêm ping ngay khi khởi động để test
-    schedule.every(1).minutes.do(ping_telegram_bot).tag('test_ping')
+    print("⏰ Đã lập lịch tự động gửi tin tức vào lúc 11:03 và 20:00 hàng ngày")
+    print("🔄 Đã lập lịch ping server mỗi 15 phút để giữ hoạt động")
     
-    print("⏰ Đã lập lịch tự động gửi tin tức vào lúc 11:59 và 20:00 hàng ngày")
-    print("🔄 Đã lập lịch ping Telegram API mỗi 15 phút để giữ hoạt động")
-    print("🧪 Thêm ping test mỗi phút trong 5 phút đầu")
-    print(f"📊 Tổng số jobs đã lập: {len(schedule.get_jobs())}")
-    
-    # Chạy ping test trong 5 phút đầu
-    test_count = 0
-    print("🧪 Bắt đầu ping test phase...")
-    while test_count < 5:
-        try:
-            schedule.run_pending()
-            time.sleep(60)  # Kiểm tra mỗi phút
-            test_count += 1
-            print(f"🧪 Ping test {test_count}/5 - {datetime.now().strftime('%H:%M:%S')}")
-        except Exception as e:
-            print(f"❌ Lỗi trong scheduler test: {e}")
-            time.sleep(60)
-    
-    # Xóa ping test sau 5 phút
-    schedule.clear('test_ping')
-    print("✅ Đã xóa ping test, chuyển sang chế độ bình thường")
-    print(f"📊 Số jobs còn lại: {len(schedule.get_jobs())}")
-    
-    # Chạy scheduler bình thường
-    print("🔄 Bắt đầu chế độ scheduler bình thường...")
     while True:
         try:
             schedule.run_pending()
@@ -911,128 +828,6 @@ def start_scheduler():
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
     print("🚀 Scheduler đã được khởi động")
-
-def start_scheduler_in_main():
-    """Khởi động scheduler trong process chính."""
-    print("🚀 Scheduler process chính bắt đầu chạy...")
-    
-    def schedule_job():
-        try:
-            print("🔄 Bắt đầu scheduled job...")
-            # Tạo event loop mới cho thread này
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(auto_send_news())
-            loop.close()
-            print("✅ Scheduled job hoàn thành")
-        except Exception as e:
-            print(f"❌ Lỗi trong scheduled job: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    # Lập lịch gửi tin tức vào lúc 14:28 và 20:00 hàng ngày
-    schedule.every().day.at("14:28").do(schedule_job)
-    schedule.every().day.at("20:00").do(schedule_job)
-    
-    # Lập lịch ping bot Telegram mỗi 5 phút để giữ nó hoạt động
-    schedule.every(5).minutes.do(ping_telegram_bot)
-    
-    # Thêm ping ngay khi khởi động để test
-    schedule.every(1).minutes.do(ping_telegram_bot).tag('test_ping')
-    
-    print("⏰ Đã lập lịch tự động gửi tin tức vào lúc 14:28 và 20:00 hàng ngày")
-    print("🔄 Đã lập lịch ping Telegram API mỗi 5 phút để giữ hoạt động")
-    print("🧪 Thêm ping test mỗi phút trong 5 phút đầu")
-    print(f"📊 Tổng số jobs đã lập: {len(schedule.get_jobs())}")
-    
-    # Chạy ping test trong 5 phút đầu
-    test_count = 0
-    print("🧪 Bắt đầu ping test phase...")
-    while test_count < 5:
-        try:
-            schedule.run_pending()
-            time.sleep(60)  # Kiểm tra mỗi phút
-            test_count += 1
-            print(f"🧪 Ping test {test_count}/5 - {datetime.now().strftime('%H:%M:%S')}")
-        except Exception as e:
-            print(f"❌ Lỗi trong scheduler test: {e}")
-            time.sleep(60)
-    
-    # Xóa ping test sau 5 phút
-    schedule.clear('test_ping')
-    print("✅ Đã xóa ping test, chuyển sang chế độ bình thường")
-    print(f"📊 Số jobs còn lại: {len(schedule.get_jobs())}")
-    
-    # Chạy scheduler bình thường
-    print("🔄 Bắt đầu chế độ scheduler bình thường...")
-    while True:
-        try:
-            schedule.run_pending()
-            time.sleep(60)  # Kiểm tra mỗi phút
-        except Exception as e:
-            print(f"❌ Lỗi trong scheduler: {e}")
-            time.sleep(60)  # Tiếp tục chạy
-
-def run_scheduler_background():
-    """Chạy scheduler trong background thread."""
-    print("🚀 Scheduler background thread bắt đầu chạy...")
-    
-    def schedule_job():
-        try:
-            print("🔄 Bắt đầu scheduled job...")
-            # Tạo event loop mới cho thread này
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(auto_send_news())
-            loop.close()
-            print("✅ Scheduled job hoàn thành")
-        except Exception as e:
-            print(f"❌ Lỗi trong scheduled job: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    # Lập lịch gửi tin tức vào lúc 14:28 và 20:00 hàng ngày
-    schedule.every().day.at("14:28").do(schedule_job)
-    schedule.every().day.at("20:00").do(schedule_job)
-    
-    # Lập lịch ping bot Telegram mỗi 5 phút để giữ nó hoạt động
-    schedule.every(5).minutes.do(ping_telegram_bot)
-    
-    # Thêm ping ngay khi khởi động để test
-    schedule.every(1).minutes.do(ping_telegram_bot).tag('test_ping')
-    
-    print("⏰ Đã lập lịch tự động gửi tin tức vào lúc 14:28 và 20:00 hàng ngày")
-    print("🔄 Đã lập lịch ping Telegram API mỗi 5 phút để giữ hoạt động")
-    print("🧪 Thêm ping test mỗi phút trong 5 phút đầu")
-    print(f"📊 Tổng số jobs đã lập: {len(schedule.get_jobs())}")
-    
-    # Chạy ping test trong 5 phút đầu
-    test_count = 0
-    print("🧪 Bắt đầu ping test phase...")
-    while test_count < 5:
-        try:
-            schedule.run_pending()
-            time.sleep(60)  # Kiểm tra mỗi phút
-            test_count += 1
-            print(f"🧪 Ping test {test_count}/5 - {datetime.now().strftime('%H:%M:%S')}")
-        except Exception as e:
-            print(f"❌ Lỗi trong scheduler test: {e}")
-            time.sleep(60)
-    
-    # Xóa ping test sau 5 phút
-    schedule.clear('test_ping')
-    print("✅ Đã xóa ping test, chuyển sang chế độ bình thường")
-    print(f"📊 Số jobs còn lại: {len(schedule.get_jobs())}")
-    
-    # Chạy scheduler bình thường
-    print("🔄 Bắt đầu chế độ scheduler bình thường...")
-    while True:
-        try:
-            schedule.run_pending()
-            time.sleep(60)  # Kiểm tra mỗi phút
-        except Exception as e:
-            print(f"❌ Lỗi trong scheduler: {e}")
-            time.sleep(60)  # Tiếp tục chạy
 
 # Flask routes
 @app.route('/')
@@ -1059,31 +854,9 @@ def status():
         "timestamp": datetime.now().isoformat()
     }
 
-# Thêm route cho webhook Telegram (nếu cần)
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    return "OK"
-
-# Thêm route để kiểm tra bot status
-@app.route('/bot-status')
-def bot_status():
-    if app_instance:
-        return {"bot_status": "running", "timestamp": datetime.now().isoformat()}
-    else:
-        return {"bot_status": "stopped", "timestamp": datetime.now().isoformat()}
-
-@app.route('/scheduler-status')
-def scheduler_status():
-    # Kiểm tra xem scheduler có đang chạy không bằng cách kiểm tra job
-    jobs = schedule.get_jobs()
-    return {
-        "scheduler_status": "running" if jobs else "stopped",
-        "jobs_count": len(jobs),
-        "timestamp": datetime.now().isoformat()
-    }
-
-def start_bot_and_scheduler():
+def main():
     global app_instance
+    
     try:
         # Khởi tạo Application
         app_instance = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
@@ -1093,109 +866,56 @@ def start_bot_and_scheduler():
         app_instance.add_handler(CommandHandler("news", news_command_handler))
         app_instance.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, help_message_handler))
         print("✅ Handlers được thêm thành công")
-        
+
+        # Khởi động scheduler
+        start_scheduler()
+
         print("🤖 Bot đang chạy... Gửi lệnh /news [dd-mm-yyyy] để bắt đầu.")
-        print("⏰ Scheduler sẽ tự động gửi tin tức vào lúc 11:59 và 20:00 hàng ngày")
-        print("🔄 Scheduler sẽ ping Telegram API mỗi 15 phút để giữ hoạt động")
+        print("⏰ Bot sẽ tự động gửi tin tức vào lúc 11:59 và 20:00 hàng ngày")
+        print("🔄 Bot sẽ ping server mỗi 15 phút để giữ hoạt động")
+        
+        # Chạy Flask app trong thread riêng
+        def run_flask():
+            try:
+                port = int(os.environ.get('PORT', 8000))
+                print(f"🚀 Khởi động Flask app trên port {port}")
+                # Thêm delay nhỏ để đảm bảo thread được khởi tạo
+                time.sleep(2)
+                app.run(host='0.0.0.0', port=port, debug=False, threaded=True, use_reloader=False)
+            except Exception as e:
+                print(f"❌ Lỗi Flask app: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        flask_thread = threading.Thread(target=run_flask, daemon=True)
+        flask_thread.start()
+        print("✅ Flask app đã khởi động")
+        
+        # Đợi một chút để Flask khởi động
+        time.sleep(3)
         
         # Chạy Telegram bot với cấu hình mới cho API 20.x
         print("🚀 Khởi động Telegram bot...")
-        
-        # Kiểm tra conflict trước
-        if check_bot_conflict():
-            print("⚠️ Phát hiện bot đang chạy ở nơi khác, sẽ thử xóa webhook...")
-            # Force xóa webhook bằng requests trực tiếp
-            force_clear_webhook()
-            time.sleep(5)
-        
-        # Trước khi chạy polling, xóa webhook và xử lý conflict
         try:
-            import asyncio
-            # Xóa webhook và drop pending updates
-            asyncio.run(app_instance.bot.delete_webhook(drop_pending_updates=True))
-            print("✅ Đã xóa webhook cũ")
-            
-            # Đợi một chút để đảm bảo webhook đã được xóa
-            time.sleep(10)
-            
-            # Kiểm tra lại xem webhook đã được xóa chưa
-            if not check_bot_conflict():
-                print("✅ Webhook đã được xóa thành công")
-            else:
-                print("⚠️ Webhook vẫn còn, sẽ force xóa lại...")
-                force_clear_webhook()
-                time.sleep(5)
-            
+            app_instance.run_polling(
+                drop_pending_updates=True,
+                allowed_updates=["message", "callback_query"],
+                close_loop=False
+            )
         except Exception as e:
-            print(f"⚠️ Không thể xóa webhook: {e}")
-            # Thử force xóa nếu asyncio thất bại
-            force_clear_webhook()
-        
-        # Chỉ chạy polling, không chạy webhook
-        # Thêm timeout và retry để tránh conflict
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                print(f"🔄 Thử khởi động bot lần {attempt + 1}/{max_retries}")
-                
-                # Thêm delay tăng dần giữa các lần thử
-                if attempt > 0:
-                    wait_time = attempt * 30  # 30s, 60s
-                    print(f"⏳ Đợi {wait_time} giây trước khi thử lại...")
-                    time.sleep(wait_time)
-                
-                app_instance.run_polling(
-                    drop_pending_updates=True,
-                    allowed_updates=["message", "callback_query"],
-                    close_loop=False,
-                    timeout=60,
-                    read_timeout=60,
-                    write_timeout=60
-                )
-                print("✅ Bot đã khởi động thành công!")
-                break
-            except Exception as e:
-                print(f"❌ Lỗi lần {attempt + 1}: {e}")
-                if attempt < max_retries - 1:
-                    print("🔄 Sẽ thử lại...")
-                else:
-                    print("❌ Đã thử tối đa số lần, bỏ qua bot Telegram")
-                    print("📧 Chỉ chạy scheduler gửi email tự động")
-                    # Nếu bot không chạy được, chỉ chạy scheduler
-                    while True:
-                        time.sleep(60)
+            print(f"❌ Lỗi polling: {e}")
+            # Thử webhook nếu polling thất bại
+            print("🔄 Thử chuyển sang webhook...")
+            app_instance.run_webhook(
+                listen="0.0.0.0",
+                port=int(os.environ.get('PORT', 8000)),
+                webhook_url="https://botnews9999.onrender.com/webhook"
+            )
         
     except Exception as e:
         print(f"❌ Lỗi khởi động bot: {e}")
         import traceback
         traceback.print_exc()
-
-def main():
-    print("🚀 Bắt đầu khởi động ứng dụng...")
-    
-    # Khởi động bot ở thread phụ
-    bot_thread = threading.Thread(target=start_bot_and_scheduler, daemon=True)
-    bot_thread.start()
-    print("✅ Bot thread đã được khởi động")
-    
-    # Khởi động scheduler trong background thread
-    print("🚀 Khởi động scheduler trong background thread...")
-    scheduler_thread = threading.Thread(target=run_scheduler_background, daemon=False)
-    scheduler_thread.start()
-    print("✅ Scheduler background thread đã được khởi động")
-    
-    # Đợi một chút để scheduler khởi động
-    time.sleep(3)
-    
-    # Flask chạy ở process chính
-    port = int(os.environ.get('PORT', 8000))
-    print(f"🚀 Khởi động Flask app trên port {port}")
-    print("✅ Các endpoint có sẵn: /, /ping, /health, /test, /status, /scheduler-status")
-    print("⏰ Scheduler sẽ chạy trong thread riêng")
-    print("🧪 Scheduler sẽ ping test mỗi phút trong 5 phút đầu")
-    
-    # Chạy Flask với threaded=True để không block scheduler
-    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False, threaded=True)
 
 if __name__ == '__main__':
     main()
