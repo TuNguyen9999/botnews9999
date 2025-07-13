@@ -1,1 +1,2 @@
-web: python botnews.py 
+web: python botnews.py
+worker: python scheduler.py 
