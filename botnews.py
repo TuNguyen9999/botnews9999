@@ -782,8 +782,14 @@ def ping_server():
     try:
         import requests
         # Ping chính server của mình để giữ nó hoạt động
-        response = requests.get("https://stock-news-bot.onrender.com/ping", timeout=10)
+        base_url = "https://botnews9999.onrender.com"
+        response = requests.get(f"{base_url}/ping", timeout=10)
         print(f"🔄 Ping server: {response.status_code}")
+        
+        # Thêm ping thêm endpoint khác để đảm bảo
+        response2 = requests.get(f"{base_url}/test", timeout=10)
+        print(f"🔄 Test endpoint: {response2.status_code}")
+        
     except Exception as e:
         print(f"❌ Lỗi khi ping server: {e}")
 
@@ -800,7 +806,7 @@ def run_scheduler():
             print(f"❌ Lỗi trong scheduled job: {e}")
     
     # Lập lịch gửi tin tức vào lúc 10:45 và 20:00 hàng ngày
-    schedule.every().day.at("12:04").do(schedule_job)
+    schedule.every().day.at("12:16").do(schedule_job)
     schedule.every().day.at("20:00").do(schedule_job)
     
     # Lập lịch ping server mỗi 15 phút để giữ nó hoạt động
@@ -836,6 +842,18 @@ def ping():
 def health():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
+@app.route('/test')
+def test():
+    return "✅ Flask server đang hoạt động bình thường!"
+
+@app.route('/status')
+def status():
+    return {
+        "bot_status": "running" if app_instance else "stopped",
+        "flask_status": "running",
+        "timestamp": datetime.now().isoformat()
+    }
+
 def main():
     global app_instance
     
@@ -860,21 +878,39 @@ def main():
         def run_flask():
             try:
                 port = int(os.environ.get('PORT', 8000))
-                app.run(host='0.0.0.0', port=port, debug=False)
+                print(f"🚀 Khởi động Flask app trên port {port}")
+                # Thêm delay nhỏ để đảm bảo thread được khởi tạo
+                time.sleep(2)
+                app.run(host='0.0.0.0', port=port, debug=False, threaded=True, use_reloader=False)
             except Exception as e:
                 print(f"❌ Lỗi Flask app: {e}")
+                import traceback
+                traceback.print_exc()
         
         flask_thread = threading.Thread(target=run_flask, daemon=True)
         flask_thread.start()
         print("✅ Flask app đã khởi động")
         
+        # Đợi một chút để Flask khởi động
+        time.sleep(3)
+        
         # Chạy Telegram bot với cấu hình mới cho API 20.x
         print("🚀 Khởi động Telegram bot...")
-        app_instance.run_polling(
-            drop_pending_updates=True,
-            allowed_updates=["message", "callback_query"],
-            close_loop=False
-        )
+        try:
+            app_instance.run_polling(
+                drop_pending_updates=True,
+                allowed_updates=["message", "callback_query"],
+                close_loop=False
+            )
+        except Exception as e:
+            print(f"❌ Lỗi polling: {e}")
+            # Thử webhook nếu polling thất bại
+            print("🔄 Thử chuyển sang webhook...")
+            app_instance.run_webhook(
+                listen="0.0.0.0",
+                port=int(os.environ.get('PORT', 8000)),
+                webhook_url="https://botnews9999.onrender.com/webhook"
+            )
         
     except Exception as e:
         print(f"❌ Lỗi khởi động bot: {e}")
